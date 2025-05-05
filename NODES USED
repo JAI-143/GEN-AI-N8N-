@@ -1,0 +1,9 @@
+Gemini API - To get details about the report
+HTTP Request - to download the drive image
+
+Webhook - to start the workflow as a trigger. (it get drive link as a externel input from postman application)
+Code - to extract id from the drive link
+
+Wikipedia - To collect the External data about the things
+Gmail - To send the out text as a mail
+
