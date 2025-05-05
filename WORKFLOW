@@ -1,0 +1,156 @@
+🔹 1. Webhook — Entry Point
+Purpose: Receive the Google Drive link (image) from Postman or external app.
+
+Node Type: Webhook
+
+HTTP Method: GET or POST (based on your Postman config)
+
+Response Mode: Optional — usually On Received
+
+Output: You get the Drive URL as a query param or body value.
+
+Example input from Postman:
+
+json
+Copy
+Edit
+{
+  "driveLink": "https://drive.google.com/file/d/1xXxXxXxXxXx/view?usp=sharing"
+}
+🔹 2. Link Modifier (Set Node)
+Purpose: Isolate and store the Google Drive file ID.
+
+Node Type: Set
+
+Fields:
+
+Name: fileId
+
+Value: Use expression like:
+
+javascript
+Copy
+Edit
+{{$json["driveLink"].match(/\/d\/(.*?)\//)[1]}}
+What it does: Extracts the ID between /d/ and /view in the URL.
+
+🔹 3. Code Node (Create Direct Download URL)
+Purpose: Build a downloadable image URL from the file ID.
+
+Node Type: Code
+
+Language: JavaScript
+
+Sample Code:
+
+javascript
+Copy
+Edit
+const fileId = $json["fileId"];
+return [
+  {
+    json: {
+      downloadUrl: `https://drive.google.com/uc?export=download&id=${fileId}`
+    }
+  }
+];
+🔹 4. HTTP Request (Download Image)
+Purpose: Fetch the actual image from Google Drive.
+
+Node Type: HTTP Request
+
+Method: GET
+
+URL: Use expression:
+
+bash
+Copy
+Edit
+{{$json["downloadUrl"]}}
+Response Format: File
+
+Download File: true
+
+✅ Optional: If you want to perform OCR, you will use this image in the next step.
+
+🔹 5. OCR (Optional but Crucial for Handwriting)
+If your input is handwritten, use an OCR tool:
+
+Option A: Google Cloud Vision
+Use Google Cloud Vision API node.
+
+Input: image file from previous step.
+
+Output: detected text
+
+Option B: Tesseract API (if self-hosted or 3rd party)
+Use HTTP Request node to call your OCR service with the image file.
+
+Output: extracted text
+
+If already typed text is sent, you can skip OCR.
+
+🔹 6. AI Agent (Gemini + Wikipedia)
+Purpose: Analyze medical content, enrich it with public data.
+
+Node Type: AI Agent
+
+Inputs:
+
+Text from OCR (or typed note) → Prompt to Gemini (Google)
+
+Wikipedia → Used as enrichment plugin/tool
+
+Prompt example:
+
+plaintext
+Copy
+Edit
+This is a handwritten medical note: "{{extracted_text}}". Analyze it and return:
+- Standardized clinical observations
+- Suggest diagnostic tests
+- Recommend treatments
+Use Wikipedia as needed.
+Outputs: Structured medical insight in natural language.
+
+🔹 7. Gmail (Send Email)
+Purpose: Send the analyzed content to a user.
+
+Node Type: Gmail
+
+Action: Send Email
+
+To: Your target recipient (e.g. yourself or doctor)
+
+Subject: Medical Note Analysis
+
+Body (HTML or Text):
+
+bash
+Copy
+Edit
+{{$json["outputFromAgent"]}}
+📌 Visual Summary of Your Flow
+scss
+Copy
+Edit
+[ Postman (sends link) ]
+        ↓
+     Webhook
+        ↓
+  Link Modifier (Set)
+        ↓
+   Code (URL builder)
+        ↓
+   HTTP Request (image)
+        ↓
+     OCR (if needed)
+        ↓
+    AI Agent (Gemini + Wiki)
+        ↓
+     Gmail (send report)
+Failed download
+
+Empty OCR output
+
+Use Set + HTTP Response to send helpful error messages back to Postman.
